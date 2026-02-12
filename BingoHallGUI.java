@@ -34,9 +34,26 @@ public class BingoHallGUI extends JFrame {
         try { myIP = InetAddress.getLocalHost().getHostAddress(); } catch (Exception e) {}
         
         setTitle("BINGO SERVER - HOST: " + myIP);
-        setSize(900, 800); // Leggermente più largo per la lista giocatori
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setSize(900, 800);
+        
+        // --- FIX RAM: Chiusura forzata del processo ---
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                System.out.println("Spegnimento Server in corso...");
+                System.exit(0); // Uccide tutti i thread e libera la RAM
+            }
+        });
+        // ----------------------------------------------
+
         setLayout(new BorderLayout());
+        
+        // Caricamento Icona (se presente)
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getResource("icon.png"));
+            setIconImage(icon.getImage());
+        } catch (Exception e) {}
 
         // --- TOP PANEL ---
         JPanel top = new JPanel(new GridLayout(2, 1));
@@ -104,13 +121,12 @@ public class BingoHallGUI extends JFrame {
         setVisible(true);
     }
 
-    // Metodo per aggiornare la tabella laterale
     private void updatePlayerList() {
         SwingUtilities.invokeLater(() -> {
-            playersModel.setRowCount(0); // Pulisci
+            playersModel.setRowCount(0);
             synchronized(playerHandlers) {
                 for (ClientHandler h : playerHandlers) {
-                    if (h.name != null) { // Mostra solo chi ha fatto il login
+                    if (h.name != null) {
                         playersModel.addRow(new Object[]{
                             h.name, 
                             String.format("%.2f", h.balance), 
@@ -147,7 +163,6 @@ public class BingoHallGUI extends JFrame {
             double individualPrize = prize / currentWinners.size();
             String names = String.join(" & ", currentWinners);
             
-            // Aggiorniamo il saldo locale dei vincitori per la tabella
             synchronized(playerHandlers) {
                 for(ClientHandler h : playerHandlers) {
                     for(String winner : currentWinners) {
@@ -177,7 +192,6 @@ public class BingoHallGUI extends JFrame {
         gameEnded = false;
         potLabel.setText("MONTEPREMI: 0.00 €");
         
-        // Reset delle puntate dei giocatori nella lista
         synchronized(playerHandlers) {
             for(ClientHandler h : playerHandlers) {
                 h.currentBet = 0;
@@ -199,7 +213,7 @@ public class BingoHallGUI extends JFrame {
                 ClientHandler h = new ClientHandler(s);
                 playerHandlers.add(h);
                 new Thread(h).start();
-                updatePlayerList(); // Aggiorna lista appena uno si connette
+                updatePlayerList();
             }
         } catch (IOException e) {}
     }
@@ -234,8 +248,8 @@ public class BingoHallGUI extends JFrame {
     class ClientHandler implements Runnable {
         PrintWriter out; BufferedReader in; 
         String name; 
-        double balance = 0; // Nuovo campo saldo
-        int currentBet = 0; // Nuovo campo puntata
+        double balance = 0;
+        int currentBet = 0;
 
         ClientHandler(Socket s) throws IOException {
             out = new PrintWriter(s.getOutputStream(), true);
@@ -246,19 +260,16 @@ public class BingoHallGUI extends JFrame {
             try {
                 String m;
                 while ((m = in.readLine()) != null) {
-                    // LOGIN:Mario:500.0
                     if (m.startsWith("LOGIN:")) {
                         String[] parts = m.split(":");
                         name = parts[1];
                         balance = Double.parseDouble(parts[2]);
                         updatePlayerList();
                     
-                    // JOIN:Mario:490.0 (il client invia il saldo residuo)
                     } else if (m.startsWith("JOIN:")) {
                         String[] parts = m.split(":");
-                        // name = parts[1]; // Il nome lo abbiamo già
-                        balance = Double.parseDouble(parts[2]); // Aggiorna saldo
-                        currentBet = currentBetAmount; // Segna la puntata
+                        balance = Double.parseDouble(parts[2]);
+                        currentBet = currentBetAmount;
                         
                         totalPot += currentBetAmount;
                         SwingUtilities.invokeLater(() -> potLabel.setText("MONTEPREMI: " + totalPot + " €"));
@@ -272,7 +283,6 @@ public class BingoHallGUI extends JFrame {
                                 double prize = totalPot / 10.0;
                                 totalPot -= prize;
                                 
-                                // Aggiorna saldo vincitore cinquina
                                 balance += prize; 
                                 updatePlayerList();
 
@@ -294,7 +304,7 @@ public class BingoHallGUI extends JFrame {
                 }
             } catch (IOException e) { 
                 playerHandlers.remove(this); 
-                updatePlayerList(); // Rimuovi dalla lista se si disconnette
+                updatePlayerList();
             }
         }
     }

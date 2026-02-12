@@ -22,8 +22,25 @@ public class BingoPlayerGUI extends JFrame {
 
         setTitle("Giocatore: " + playerName + " (Connesso a " + serverIP + ")");
         setSize(850, 450);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        
+        // --- FIX RAM: Chiusura forzata del processo ---
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                System.out.println("Chiusura Client...");
+                System.exit(0); // Uccide thread di rete e libera RAM
+            }
+        });
+        // ----------------------------------------------
+        
         setLayout(new BorderLayout(10,10));
+        
+        // Caricamento Icona (se presente)
+        try {
+            ImageIcon icon = new ImageIcon(getClass().getResource("icon.png"));
+            setIconImage(icon.getImage());
+        } catch (Exception e) {}
 
         JPanel side = new JPanel(new GridLayout(3,1));
         side.setPreferredSize(new Dimension(150, 0));
@@ -70,7 +87,6 @@ public class BingoPlayerGUI extends JFrame {
             out = new PrintWriter(s.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
             
-            // NUOVO: Invia subito LOGIN con nome e saldo iniziale
             out.println("LOGIN:" + playerName + ":" + myBalance);
 
             String msg;
@@ -145,7 +161,6 @@ public class BingoPlayerGUI extends JFrame {
         if(res == JOptionPane.YES_OPTION && myBalance >= amt) {
             myBalance -= amt;
             isPlaying = true;
-            // NUOVO: Invia JOIN con nome e saldo aggiornato
             out.println("JOIN:" + playerName + ":" + myBalance);
             betLabel.setText("Puntata: " + amt + " €");
             updateBalanceUI();
