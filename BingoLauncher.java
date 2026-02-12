@@ -1,30 +1,35 @@
 import javax.swing.*;
+import java.net.InetAddress;
 
 public class BingoLauncher {
     public static void main(String[] args) {
-        // Impostiamo il look and feel per renderlo più moderno
         try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) {}
 
-        Object[] options = {"ENTRA IN PARTITA (Giocatore)", "CREA PARTITA (Server)"};
+        Object[] options = {"CREA PARTITA (Server/Banco)", "ENTRA IN PARTITA (Giocatore)"};
         
         int choice = JOptionPane.showOptionDialog(null, 
-                "Benvenuto al Bingo! Cosa vuoi fare?", 
+                "BINGO GOLD EDITION\nCosa vuoi fare?", 
                 "Bingo Launcher",
                 JOptionPane.YES_NO_OPTION, 
                 JOptionPane.QUESTION_MESSAGE, 
                 null, 
                 options, 
-                options[0]); // Default su "Giocatore"
+                options[0]);
 
         if (choice == 0) {
-            // Scelta: Giocatore
-            String ip = JOptionPane.showInputDialog(null, "Inserisci IP del Server (es. 192.168.1.5):", "127.0.0.1");
-            if (ip != null && !ip.isEmpty()) {
-                new BingoPlayerGUI(ip);
-            }
-        } else if (choice == 1) {
-            // Scelta: Server
+            // Avvia il Server (UI Ricca)
             new BingoHallGUI();
+        } else if (choice == 1) {
+            // Trova IP locale per suggerimento
+            String defaultIP = "";
+            try { defaultIP = InetAddress.getLocalHost().getHostAddress(); } catch(Exception e){}
+            
+            String ip = JOptionPane.showInputDialog(null, "Inserisci IP del Server:", defaultIP);
+            if (ip != null && !ip.trim().isEmpty()) {
+                new BingoPlayerGUI(ip.trim());
+            } else {
+                System.exit(0);
+            }
         } else {
             System.exit(0);
         }

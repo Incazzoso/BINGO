@@ -2,6 +2,7 @@ import java.awt.*;
 import java.io.*;
 import java.net.Socket;
 import javax.swing.*;
+import javax.swing.border.LineBorder;
 
 public class BingoPlayerGUI extends JFrame {
     private BingoTicket ticket = new BingoTicket();
@@ -12,69 +13,67 @@ public class BingoPlayerGUI extends JFrame {
     private String serverIP;
     private double myBalance = 500.0;
     private boolean isPlaying = false;
-    private boolean roundCompleted = false;
 
     public BingoPlayerGUI(String ipAddress) {
         this.serverIP = ipAddress;
         
-        playerName = JOptionPane.showInputDialog("Tuo Nome:");
+        playerName = JOptionPane.showInputDialog("Come ti chiami?");
         if(playerName == null || playerName.trim().isEmpty()) System.exit(0);
 
-        setTitle("Giocatore: " + playerName + " (Connesso a " + serverIP + ")");
-        setSize(850, 450);
-        
-        // --- FIX RAM: Chiusura forzata del processo ---
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent e) {
-                System.out.println("Chiusura Client...");
-                System.exit(0); // Uccide thread di rete e libera RAM
-            }
-        });
-        // ----------------------------------------------
-        
+        setTitle(playerName + " - Connesso a: " + serverIP);
+        setSize(850, 500);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout(10,10));
-        
-        // Caricamento Icona (se presente)
-        try {
-            ImageIcon icon = new ImageIcon(getClass().getResource("icon.png"));
-            setIconImage(icon.getImage());
-        } catch (Exception e) {}
 
+        // --- SIDE PANEL (Stats) ---
         JPanel side = new JPanel(new GridLayout(3,1));
-        side.setPreferredSize(new Dimension(150, 0));
+        side.setPreferredSize(new Dimension(200, 0));
+        side.setBackground(new Color(240, 240, 240));
+        
         balanceLabel = new JLabel("Saldo: 500.00 €", SwingConstants.CENTER);
+        balanceLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        
         betLabel = new JLabel("Puntata: 0 €", SwingConstants.CENTER);
-        side.add(new JLabel(playerName, SwingConstants.CENTER));
+        
+        side.add(new JLabel("Giocatore: " + playerName, SwingConstants.CENTER));
         side.add(balanceLabel);
         side.add(betLabel);
         add(side, BorderLayout.WEST);
 
+        // --- TOP PANEL (Last Number) ---
         JPanel head = new JPanel(new GridLayout(2,1));
         head.setBackground(new Color(41, 128, 185));
         lastNumberLabel = new JLabel("-", SwingConstants.CENTER);
-        lastNumberLabel.setFont(new Font("Arial", Font.BOLD, 50));
+        lastNumberLabel.setFont(new Font("Arial", Font.BOLD, 60));
         lastNumberLabel.setForeground(Color.WHITE);
-        head.add(new JLabel("ULTIMO ESTRATTO", SwingConstants.CENTER)).setForeground(Color.WHITE);
+        
+        JLabel title = new JLabel("ULTIMO ESTRATTO", SwingConstants.CENTER);
+        title.setForeground(Color.WHITE);
+        title.setFont(new Font("SansSerif", Font.BOLD, 14));
+        
+        head.add(title);
         head.add(lastNumberLabel);
         add(head, BorderLayout.NORTH);
 
+        // --- CENTER PANEL (Ticket Grid) ---
         JPanel grid = new JPanel(new GridLayout(3,9,5,5));
+        grid.setBorder(BorderFactory.createEmptyBorder(20,20,20,20));
         for(int r=0; r<3; r++){
             for(int c=0; c<9; c++){
                 JLabel l = new JLabel("", SwingConstants.CENTER);
                 l.setOpaque(true);
-                l.setBorder(BorderFactory.createLineBorder(Color.GRAY));
-                l.setFont(new Font("Arial", Font.BOLD, 20));
+                l.setBorder(new LineBorder(Color.BLACK));
+                l.setFont(new Font("Arial", Font.BOLD, 24));
                 gridLabels[r][c] = l;
                 grid.add(l);
             }
         }
-        refreshUI();
+        refreshTicketUI();
         add(grid, BorderLayout.CENTER);
 
-        infoLabel = new JLabel("Tentativo di connessione a " + serverIP + "...", SwingConstants.CENTER);
+        // --- BOTTOM PANEL (Status) ---
+        infoLabel = new JLabel("Tentativo di connessione...", SwingConstants.CENTER);
+        infoLabel.setFont(new Font("Arial", Font.ITALIC, 12));
         add(infoLabel, BorderLayout.SOUTH);
 
         setVisible(true);
@@ -83,11 +82,11 @@ public class BingoPlayerGUI extends JFrame {
 
     private void connect() {
         try (Socket s = new Socket(serverIP, 15244)) {
-            SwingUtilities.invokeLater(() -> infoLabel.setText("Connesso al Banco!"));
+            SwingUtilities.invokeLater(() -> infoLabel.setText("Connesso! In attesa del Banco..."));
             out = new PrintWriter(s.getOutputStream(), true);
             BufferedReader in = new BufferedReader(new InputStreamReader(s.getInputStream()));
             
-            out.println("LOGIN:" + playerName + ":" + myBalance);
+            out.println("LOGIN:" + playerName);
 
             String msg;
             while ((msg = in.readLine()) != null) {
@@ -95,8 +94,6 @@ public class BingoPlayerGUI extends JFrame {
                     int amt = Integer.parseInt(msg.split(":")[1]);
                     SwingUtilities.invokeLater(() -> askBet(amt));
                 } else if (msg.startsWith("WINNER_EVENT:")) {
-                    if (roundCompleted) continue;
-                    roundCompleted = true;
                     String[] parts = msg.split(":");
                     String winnerName = parts[1];
                     double prize = Double.parseDouble(parts[2]);
@@ -104,7 +101,7 @@ public class BingoPlayerGUI extends JFrame {
                         if (winnerName.contains(playerName)) {
                             myBalance += prize;
                             updateBalanceUI();
-                            JOptionPane.showMessageDialog(this, "HAI VINTO! Premio: " + String.format("%.2f", prize) + "€");
+                            JOptionPane.showMessageDialog(this, "HAI VINTO IL BINGO! Premio: " + String.format("%.2f", prize) + "€");
                         } else {
                             JOptionPane.showMessageDialog(this, "Ha vinto " + winnerName);
                         }
@@ -119,20 +116,21 @@ public class BingoPlayerGUI extends JFrame {
                             JOptionPane.showMessageDialog(this, "HAI FATTO CINQUINA! Vinti: " + String.format("%.2f", p) + "€");
                         } else {
                             infoLabel.setText("CINQUINA DI " + parts[1]);
+                            JOptionPane.showMessageDialog(this, "Cinquina di " + parts[1]);
                         }
                     });
                 } else if (msg.equals("RESET_GAME")) {
                     ticket = new BingoTicket();
                     isPlaying = false;
-                    roundCompleted = false;
                     SwingUtilities.invokeLater(() -> {
                         lastNumberLabel.setText("-");
                         betLabel.setText("Puntata: 0 €");
-                        refreshUI();
+                        refreshTicketUI();
+                        infoLabel.setText("In attesa della nuova partita...");
                     });
                 } else if (msg.startsWith("POT_UPDATE:")) {
                     String pot = msg.split(":")[1];
-                    SwingUtilities.invokeLater(() -> infoLabel.setText("Montepremi: " + pot + " €"));
+                    SwingUtilities.invokeLater(() -> infoLabel.setText("Montepremi attuale: " + pot + " €"));
                 } else {
                     try {
                         int n = Integer.parseInt(msg);
@@ -140,7 +138,7 @@ public class BingoPlayerGUI extends JFrame {
                             ticket.eliminateNumber(n);
                             SwingUtilities.invokeLater(() -> {
                                 lastNumberLabel.setText(""+n);
-                                refreshUI();
+                                refreshTicketUI();
                                 if(ticket.checkBingo()) out.println("BINGO:"+playerName);
                                 else if(ticket.checkCinquina()) out.println("CINQUINA:"+playerName);
                             });
@@ -150,20 +148,31 @@ public class BingoPlayerGUI extends JFrame {
             }
         } catch (Exception e) {
             SwingUtilities.invokeLater(() -> {
-                infoLabel.setText("Errore: " + e.getMessage());
-                JOptionPane.showMessageDialog(this, "Impossibile connettersi al Server " + serverIP);
+                infoLabel.setText("Disconnesso.");
+                JOptionPane.showMessageDialog(this, "Errore connessione: " + e.getMessage());
             });
         }
     }
 
     private void askBet(int amt) {
-        int res = JOptionPane.showConfirmDialog(this, "Vuoi puntare " + amt + "€?", "Puntata", JOptionPane.YES_NO_OPTION);
+        if (amt == 0) {
+            // Partita gratis
+             isPlaying = true;
+             out.println("JOIN:" + playerName + ":0");
+             betLabel.setText("Partita GRATIS");
+             return;
+        }
+        
+        int res = JOptionPane.showConfirmDialog(this, "Il Banco chiede una puntata di " + amt + "€. Accetti?", "Nuova Partita", JOptionPane.YES_NO_OPTION);
         if(res == JOptionPane.YES_OPTION && myBalance >= amt) {
             myBalance -= amt;
             isPlaying = true;
-            out.println("JOIN:" + playerName + ":" + myBalance);
+            out.println("JOIN:" + playerName + ":" + amt);
             betLabel.setText("Puntata: " + amt + " €");
             updateBalanceUI();
+            infoLabel.setText("Sei in gioco! Buona fortuna.");
+        } else {
+            infoLabel.setText("Hai rifiutato la partita (Spettatore).");
         }
     }
 
@@ -171,7 +180,7 @@ public class BingoPlayerGUI extends JFrame {
         balanceLabel.setText("Saldo: " + String.format("%.2f", myBalance) + " €");
     }
 
-    private void refreshUI() {
+    private void refreshTicketUI() {
         for(int r=0; r<3; r++){
             for(int c=0; c<9; c++){
                 int v = ticket.getSlotValue(r,c);
@@ -182,6 +191,4 @@ public class BingoPlayerGUI extends JFrame {
             }
         }
     }
-
-    public static void main(String[] args) { new BingoPlayerGUI("localhost"); }
 }

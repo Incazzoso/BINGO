@@ -5,7 +5,6 @@ public class BingoTicket {
     private final static int ROWS = 3;
     private final static int COLUMNS = 9;
     private final static int NUMBERS_PER_ROW = 5;
-    private Random rand = new Random();
     private boolean cinquinaFatta = false;
 
     public BingoTicket() {
@@ -14,14 +13,18 @@ public class BingoTicket {
     }
 
     private void generate() {
+        Random rand = new Random();
         for (int i = 0; i < ROWS; i++) {
             int numbersPlaced = 0;
             while (numbersPlaced < NUMBERS_PER_ROW) {
                 int col = rand.nextInt(COLUMNS);
                 if (slots[i][col] == 0) {
-                    int rangeMin = (col * 10) + 1;
-                    int rangeMax = (col == 8) ? 91 : (col + 1) * 10;
-                    int number = rand.nextInt(rangeMin, rangeMax);
+                    // Logica standard: col 0 (1-9), col 1 (10-19)... col 8 (80-90)
+                    int min = (col == 0) ? 1 : (col * 10); 
+                    int max = (col == 8) ? 91 : (col + 1) * 10;
+                    
+                    int number = rand.nextInt(max - min) + min;
+                    
                     if (!isDuplicateInColumn(col, number)) {
                         slots[i][col] = number;
                         numbersPlaced++;
@@ -57,7 +60,7 @@ public class BingoTicket {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLUMNS; j++) {
                 if (slots[i][j] == number) {
-                    slots[i][j] = -1;
+                    slots[i][j] = -1; // -1 = segnato
                     return;
                 }
             }
@@ -82,6 +85,7 @@ public class BingoTicket {
     public boolean checkBingo() {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLUMNS; j++) {
+                // Se c'è un numero maggiore di 0, non è stato ancora estratto
                 if (slots[i][j] > 0) return false;
             }
         }

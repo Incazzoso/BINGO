@@ -10,11 +10,11 @@ import javax.swing.table.DefaultTableModel;
 public class BingoHallGUI extends JFrame {
     private JButton startButton, resetButton;
     private JComboBox<Integer> betSelector;
-    private JLabel statusLabel, potLabel;
+    private JLabel statusLabel, potLabel, ipDisplayLabel;
     private JPanel numbersPanel;
     private JLabel[] numberLabels = new JLabel[91];
     
-    // Lista Giocatori (GUI)
+    // Tabella Giocatori
     private JTable playersTable;
     private DefaultTableModel playersModel;
 
@@ -29,58 +29,54 @@ public class BingoHallGUI extends JFrame {
     private final List<String> currentWinners = Collections.synchronizedList(new ArrayList<>());
 
     public BingoHallGUI() {
-        // Recupero IP
+        // Recupero IP per mostrarlo all'utente
         String myIP = "Sconosciuto";
         try { myIP = InetAddress.getLocalHost().getHostAddress(); } catch (Exception e) {}
         
-        setTitle("BINGO SERVER - HOST: " + myIP);
-        setSize(900, 800);
-        
-        // --- FIX RAM: Chiusura forzata del processo ---
-        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-        addWindowListener(new java.awt.event.WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent e) {
-                System.out.println("Spegnimento Server in corso...");
-                System.exit(0); // Uccide tutti i thread e libera la RAM
-            }
-        });
-        // ----------------------------------------------
-
+        setTitle("BINGO HALL - GOLD EDITION");
+        setSize(1000, 700);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLayout(new BorderLayout());
-        
-        // Caricamento Icona (se presente)
-        try {
-            ImageIcon icon = new ImageIcon(getClass().getResource("icon.png"));
-            setIconImage(icon.getImage());
-        } catch (Exception e) {}
 
-        // --- TOP PANEL ---
-        JPanel top = new JPanel(new GridLayout(2, 1));
+        // --- TOP PANEL (IP e Controlli) ---
+        JPanel topContainer = new JPanel(new BorderLayout());
+        
+        // Pannello IP (Giallo per risaltare)
+        JPanel ipPanel = new JPanel();
+        ipPanel.setBackground(Color.YELLOW);
+        ipDisplayLabel = new JLabel("FAI CONNETTERE GLI AMICI A QUESTO IP: " + myIP);
+        ipDisplayLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        ipPanel.add(ipDisplayLabel);
+        topContainer.add(ipPanel, BorderLayout.NORTH);
+
+        JPanel controlsPanel = new JPanel(new GridLayout(2, 1));
         JPanel r1 = new JPanel();
-        betSelector = new JComboBox<>(new Integer[]{10, 20, 50, 100});
+        betSelector = new JComboBox<>(new Integer[]{0, 10, 20, 50, 100}); // 0 per partite gratis
         startButton = new JButton("1. RICHIEDI PUNTATE");
         resetButton = new JButton("RESET / PROSSIMA MANO");
         resetButton.setEnabled(false);
-        r1.add(new JLabel("Puntata: ")); r1.add(betSelector); r1.add(startButton); r1.add(resetButton);
+        r1.add(new JLabel("Costo Cartella (€): ")); r1.add(betSelector); r1.add(startButton); r1.add(resetButton);
 
         JPanel r2 = new JPanel(new FlowLayout(FlowLayout.CENTER, 40, 5));
         statusLabel = new JLabel("Giocatori: 0");
         potLabel = new JLabel("MONTEPREMI: 0.00 €");
         potLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        potLabel.setForeground(new Color(0, 100, 0)); // Verde scuro
         r2.add(statusLabel); r2.add(potLabel);
 
-        top.add(r1); top.add(r2);
-        add(top, BorderLayout.NORTH);
+        controlsPanel.add(r1); controlsPanel.add(r2);
+        topContainer.add(controlsPanel, BorderLayout.CENTER);
+        
+        add(topContainer, BorderLayout.NORTH);
 
         // --- LEFT PANEL (LISTA GIOCATORI) ---
-        String[] columnNames = {"Giocatore", "Saldo (€)", "Puntata (€)"};
+        String[] columnNames = {"Giocatore", "Saldo (€)", "Stato"};
         playersModel = new DefaultTableModel(columnNames, 0);
         playersTable = new JTable(playersModel);
-        playersTable.setEnabled(false); // Sola lettura
+        playersTable.setEnabled(false); 
         JScrollPane scrollPane = new JScrollPane(playersTable);
-        scrollPane.setPreferredSize(new Dimension(250, 0));
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Stato Giocatori"));
+        scrollPane.setPreferredSize(new Dimension(300, 0));
+        scrollPane.setBorder(BorderFactory.createTitledBorder("Sala Giochi"));
         add(scrollPane, BorderLayout.WEST);
 
         // --- CENTER PANEL (TABELLONE) ---
@@ -88,14 +84,10 @@ public class BingoHallGUI extends JFrame {
         initializeTabellone();
         add(numbersPanel, BorderLayout.CENTER);
 
-        // --- BOTTOM PANEL ---
-        JPanel ipPanel = new JPanel();
-        ipPanel.setBackground(Color.YELLOW);
-        ipPanel.add(new JLabel("FAI CONNETTERE GLI AMICI A: " + myIP));
-        add(ipPanel, BorderLayout.SOUTH);
-
+        // Avvio Server
         new Thread(this::setupServer).start();
 
+        // Logica Pulsanti
         startButton.addActionListener(e -> {
             if (startButton.getText().contains("RICHIEDI")) {
                 currentBetAmount = (Integer) betSelector.getSelectedItem();
@@ -104,8 +96,9 @@ public class BingoHallGUI extends JFrame {
                 broadcast("BET_REQUEST:" + currentBetAmount);
                 startButton.setText("2. AVVIA ESTRAZIONE");
             } else {
-                if (totalPot == 0) {
-                    JOptionPane.showMessageDialog(this, "Nessun giocatore ha puntato!");
+                // Controllo se ci sono giocatori
+                if (playerHandlers.isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Nessun giocatore connesso!");
                     return;
                 }
                 gameRunning = true;
@@ -127,10 +120,11 @@ public class BingoHallGUI extends JFrame {
             synchronized(playerHandlers) {
                 for (ClientHandler h : playerHandlers) {
                     if (h.name != null) {
+                        String stato = h.hasPaid ? "PAGATO" : "In attesa";
                         playersModel.addRow(new Object[]{
                             h.name, 
                             String.format("%.2f", h.balance), 
-                            h.currentBet > 0 ? h.currentBet : "-"
+                            stato
                         });
                     }
                 }
@@ -140,7 +134,7 @@ public class BingoHallGUI extends JFrame {
     }
 
     private void startGameLoop() {
-        gameTimer = new Timer(1500, e -> {
+        gameTimer = new Timer(2000, e -> { // 2 secondi tra un numero e l'altro
             if (gameEnded) return;
             int num = generator.nextInt();
             if (num == 0) stopGame("Esauriti");
@@ -173,12 +167,10 @@ public class BingoHallGUI extends JFrame {
                 }
             }
             updatePlayerList();
-
             broadcast("WINNER_EVENT:" + names + ":" + individualPrize);
-            statusLabel.setText("Vinto da: " + names + " (" + String.format("%.2f", individualPrize) + "€)");
+            statusLabel.setText("Vittoria: " + names);
         } else {
             broadcast("WINNER_EVENT:Nessuno:0");
-            statusLabel.setText("Partita terminata senza vincitori.");
         }
         
         resetButton.setEnabled(true);
@@ -194,11 +186,10 @@ public class BingoHallGUI extends JFrame {
         
         synchronized(playerHandlers) {
             for(ClientHandler h : playerHandlers) {
-                h.currentBet = 0;
+                h.hasPaid = false;
             }
         }
         updatePlayerList();
-
         initializeTabellone();
         broadcast("RESET_GAME");
         startButton.setText("1. RICHIEDI PUNTATE");
@@ -215,7 +206,7 @@ public class BingoHallGUI extends JFrame {
                 new Thread(h).start();
                 updatePlayerList();
             }
-        } catch (IOException e) {}
+        } catch (IOException e) { e.printStackTrace(); }
     }
 
     private void broadcast(String m) {
@@ -226,7 +217,8 @@ public class BingoHallGUI extends JFrame {
 
     private void updateTableUI(int n) {
         SwingUtilities.invokeLater(() -> {
-            numberLabels[n].setBackground(Color.GREEN);
+            numberLabels[n].setBackground(Color.RED);
+            numberLabels[n].setForeground(Color.WHITE);
             statusLabel.setText("Estratto: " + n);
         });
     }
@@ -248,8 +240,8 @@ public class BingoHallGUI extends JFrame {
     class ClientHandler implements Runnable {
         PrintWriter out; BufferedReader in; 
         String name; 
-        double balance = 0;
-        int currentBet = 0;
+        double balance = 500.0; // Saldo iniziale
+        boolean hasPaid = false;
 
         ClientHandler(Socket s) throws IOException {
             out = new PrintWriter(s.getOutputStream(), true);
@@ -261,43 +253,40 @@ public class BingoHallGUI extends JFrame {
                 String m;
                 while ((m = in.readLine()) != null) {
                     if (m.startsWith("LOGIN:")) {
-                        String[] parts = m.split(":");
-                        name = parts[1];
-                        balance = Double.parseDouble(parts[2]);
+                        name = m.split(":")[1];
                         updatePlayerList();
-                    
                     } else if (m.startsWith("JOIN:")) {
-                        String[] parts = m.split(":");
-                        balance = Double.parseDouble(parts[2]);
-                        currentBet = currentBetAmount;
-                        
-                        totalPot += currentBetAmount;
-                        SwingUtilities.invokeLater(() -> potLabel.setText("MONTEPREMI: " + totalPot + " €"));
-                        broadcast("POT_UPDATE:" + totalPot);
-                        updatePlayerList();
-
+                        // Il cliente accetta la puntata
+                        if (!hasPaid) {
+                            balance -= currentBetAmount;
+                            totalPot += currentBetAmount;
+                            hasPaid = true;
+                            SwingUtilities.invokeLater(() -> potLabel.setText("MONTEPREMI: " + totalPot + " €"));
+                            broadcast("POT_UPDATE:" + totalPot);
+                            updatePlayerList();
+                        }
                     } else if (m.startsWith("CINQUINA:")) {
                         synchronized(BingoHallGUI.this) {
                             if (!cinquinaAssegnata && !gameEnded) {
                                 cinquinaAssegnata = true;
-                                double prize = totalPot / 10.0;
+                                double prize = totalPot * 0.20; // 20% per la cinquina
                                 totalPot -= prize;
-                                
                                 balance += prize; 
                                 updatePlayerList();
-
-                                SwingUtilities.invokeLater(() -> potLabel.setText("MONTEPREMI: " + totalPot + " €"));
                                 broadcast("PAUSA_CINQUINA:" + name + ":" + prize);
+                                SwingUtilities.invokeLater(() -> potLabel.setText("MONTEPREMI: " + totalPot + " €"));
                                 
+                                // Pausa scenica
                                 if(gameTimer != null) gameTimer.stop();
-                                new Timer(10000, e -> { if(gameRunning && !gameEnded) gameTimer.start(); }).start();
+                                new Timer(5000, e -> { if(gameRunning && !gameEnded) gameTimer.start(); }).start();
                             }
                         }
                     } else if (m.startsWith("BINGO:")) {
                         synchronized(BingoHallGUI.this) {
                             if(!gameEnded) {
                                 currentWinners.add(name);
-                                new Timer(300, e -> stopGame("Bingo")).start();
+                                // Aspetta un attimo per vedere se altri fanno bingo contemporaneamente
+                                new Timer(500, e -> stopGame("Bingo")).start();
                             }
                         }
                     }
@@ -308,6 +297,4 @@ public class BingoHallGUI extends JFrame {
             }
         }
     }
-
-    public static void main(String[] args) { new BingoHallGUI(); }
 }

@@ -9,21 +9,20 @@ public class BingoNumberGenerator {
 
     public BingoNumberGenerator() {
         numbers = new ArrayList<>();
-        for (int i = 1; i <= MAX; i++) {
-            numbers.add(i);
-        }
         reset();
     }
 
     public void reset() {
+        numbers.clear();
+        for (int i = 1; i <= MAX; i++) {
+            numbers.add(i);
+        }
         Collections.shuffle(numbers);
         currentIndex = 0;
     }
 
     public int nextInt() {
-        if (currentIndex >= MAX) {
-            return 0;
-        }
+        if (currentIndex >= MAX) return 0;
         return numbers.get(currentIndex++);
     }
 }
