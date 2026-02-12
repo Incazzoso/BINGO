@@ -1,26 +1,26 @@
 # 🎰 Bingo Server Gold - Real Money System
 
-Un'applicazione Java completa per gestire partite di Bingo in multiplayer, sia in rete locale (LAN) che su Internet. Il sistema include un'interfaccia avanzata per il banco (Host) e una dashboard interattiva per i giocatori con gestione del saldo in tempo reale.
+A comprehensive Java-based multiplayer Bingo application designed for real-time gameplay over Local Area Networks (LAN) or the Internet. The system features an advanced Host Dashboard and an interactive Player Dashboard with live balance and bet management.
 
-## 🚀 Caratteristiche principali
-* **Architettura Client-Server:** Comunicazione fluida tramite Socket TCP.
-* **Gestione Multi-User:** Supporto per più giocatori contemporanei con monitoraggio live di saldi e puntate nella Hall.
-* **Sistema di Scommesse:** Gestione automatizzata del montepremi, vincite per Cinquina e Bingo con accredito immediato.
-* **Interfaccia Grafica (Swing):** Tabellone segnapunti per il server e cartella interattiva con segnatura automatica (simbolo "X") per i giocatori.
-* **Sicurezza Premi:** Algoritmo sincronizzato per garantire l'assegnazione univoca dei premi (evita pagamenti duplicati).
+## 🚀 Key Features
+* **Client-Server Architecture:** Seamless communication via TCP Sockets.
+* **Multi-User Management:** Support for multiple concurrent players with live tracking of balances and bets in the Hall.
+* **Betting System:** Automated prize pool management, with instant credits for "Cinquina" (Line) and Bingo wins.
+* **Graphical User Interface (Swing):** A master scoreboard for the Host and interactive tickets with automatic "X" marking for Players.
+* **Payout Integrity:** Synchronized server logic ensures unique prize assignment, preventing duplicate or erroneous payouts.
 
-## 🛠️ Requisiti
-* **Java Runtime Environment (JRE) 17** o superiore.
-* **Radmin VPN** o **Hamachi** (consigliati per partite su Internet).
+## 🛠️ Requirements
+* **Java Runtime Environment (JRE) 17** or higher.
+* **Radmin VPN** or **Hamachi** (recommended for Internet play).
 
-## 🎮 Istruzioni per l'uso
-1.  Scarica il file `BingoGame.jar`.
-2.  Avvia il file (doppio clic o `java -jar BingoGame.jar`).
-3.  **Per l'Host:** Seleziona "CREA PARTITA", comunica l'indirizzo IP visualizzato ai tuoi amici e clicca su "RICHIEDI PUNTATE" quando tutti sono connessi.
-4.  **Per i Giocatori:** Seleziona "ENTRA IN PARTITA", inserisci l'IP dell'Host e il tuo nome.
+## 🎮 How to Play
+1.  Download the `BingoGame.jar` file.
+2.  Launch the file (double-click or run `java -jar BingoGame.jar`).
+3.  **For the Host:** Select "CREATE GAME," share the displayed IP address with your friends, and click "REQUEST BETS" once everyone has joined.
+4.  **For Players:** Select "JOIN GAME," enter the Host's IP address, and provide your name.
 
-## 📦 Compilazione (per sviluppatori)
-Se desideri compilare il progetto manualmente:
+## 📦 Compilation (For Developers)
+To compile the project manually:
 ```bash
 javac -encoding UTF-8 *.java
 echo Main-Class: BingoLauncher > manifest.txt
