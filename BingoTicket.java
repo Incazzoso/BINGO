@@ -60,7 +60,7 @@ public class BingoTicket {
         for (int i = 0; i < ROWS; i++) {
             for (int j = 0; j < COLUMNS; j++) {
                 if (slots[i][j] == number) {
-                    slots[i][j] = -1; // -1 = segnato
+                    slots[i][j] = -1; 
                     return;
                 }
             }
@@ -75,7 +75,7 @@ public class BingoTicket {
                 if (slots[i][j] == -1) count++;
             }
             if (count == NUMBERS_PER_ROW) {
-                cinquinaFatta = true;
+                cinquinaFatta = true; // Impedisce doppie cinquine sulla stessa riga
                 return true;
             }
         }

@@ -120,15 +120,15 @@ public class BingoPlayerGUI extends JFrame {
                         }
                     });
                 } else if (msg.equals("RESET_GAME")) {
-                    ticket = new BingoTicket();
-                    isPlaying = false;
+                    this.ticket = new BingoTicket(); // Crea una nuova cartella pulita
+                    this.isPlaying = false;
                     SwingUtilities.invokeLater(() -> {
                         lastNumberLabel.setText("-");
                         betLabel.setText("Puntata: 0 €");
-                        refreshTicketUI();
-                        infoLabel.setText("In attesa della nuova partita...");
+                        refreshTicketUI(); // Ridisegna la cartella pulita
+                        infoLabel.setText("Nuova partita! In attesa della puntata...");
                     });
-                } else if (msg.startsWith("POT_UPDATE:")) {
+    } else if (msg.startsWith("POT_UPDATE:")) {
                     String pot = msg.split(":")[1];
                     SwingUtilities.invokeLater(() -> infoLabel.setText("Montepremi attuale: " + pot + " €"));
                 } else {
@@ -157,10 +157,10 @@ public class BingoPlayerGUI extends JFrame {
     private void askBet(int amt) {
         if (amt == 0) {
             // Partita gratis
-             isPlaying = true;
-             out.println("JOIN:" + playerName + ":0");
-             betLabel.setText("Partita GRATIS");
-             return;
+            isPlaying = true;
+            out.println("JOIN:" + playerName + ":0");
+            betLabel.setText("Partita GRATIS");
+            return;
         }
         
         int res = JOptionPane.showConfirmDialog(this, "Il Banco chiede una puntata di " + amt + "€. Accetti?", "Nuova Partita", JOptionPane.YES_NO_OPTION);
@@ -180,14 +180,26 @@ public class BingoPlayerGUI extends JFrame {
         balanceLabel.setText("Saldo: " + String.format("%.2f", myBalance) + " €");
     }
 
-    private void refreshTicketUI() {
+private void refreshTicketUI() {
         for(int r=0; r<3; r++){
             for(int c=0; c<9; c++){
                 int v = ticket.getSlotValue(r,c);
                 JLabel l = gridLabels[r][c];
-                if(v == 0) { l.setText(""); l.setBackground(Color.LIGHT_GRAY); }
-                else if(v == -1) { l.setText("X"); l.setBackground(Color.RED); l.setForeground(Color.WHITE); }
-                else { l.setText(""+v); l.setBackground(Color.WHITE); l.setForeground(Color.BLACK); }
+                if(v == 0) { 
+                    l.setText(""); 
+                    l.setBackground(Color.LIGHT_GRAY); 
+                }
+                else if(v == -1) { 
+                    l.setText("X"); 
+                    // CAMBIATO: La X ora ha lo sfondo VERDE
+                    l.setBackground(new Color(46, 204, 113)); 
+                    l.setForeground(Color.WHITE); 
+                }
+                else { 
+                    l.setText(""+v); 
+                    l.setBackground(Color.WHITE); 
+                    l.setForeground(Color.BLACK); 
+                }
             }
         }
     }

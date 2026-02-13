@@ -190,8 +190,8 @@ public class BingoHallGUI extends JFrame {
             }
         }
         updatePlayerList();
-        initializeTabellone();
-        broadcast("RESET_GAME");
+        initializeTabellone(); // Questo pulisce i colori sul server
+        broadcast("RESET_GAME"); // Invia il comando di reset a tutti i client
         startButton.setText("1. RICHIEDI PUNTATE");
         startButton.setEnabled(true);
         resetButton.setEnabled(false);
@@ -215,9 +215,10 @@ public class BingoHallGUI extends JFrame {
         }
     }
 
-    private void updateTableUI(int n) {
+private void updateTableUI(int n) {
         SwingUtilities.invokeLater(() -> {
-            numberLabels[n].setBackground(Color.RED);
+            // CAMBIATO: Colore ora è VERDE per i numeri estratti
+            numberLabels[n].setBackground(new Color(46, 204, 113)); 
             numberLabels[n].setForeground(Color.WHITE);
             statusLabel.setText("Estratto: " + n);
         });
